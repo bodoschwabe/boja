@@ -51,9 +51,6 @@ void
 Nyx::variable_setup()
 {
 
-  // initialize the start time for our CPU-time tracker
-  startCPUTime = ParallelDescriptor::second();
-
     BL_ASSERT(desc_lst.size() == 0);
 
     if (ParallelDescriptor::IOProcessor()) {
@@ -63,10 +60,7 @@ Nyx::variable_setup()
           std::cout << "\n" << "Nyx git describe:   " << nyx_hash << "\n";
     }
 
-    // Get options, set phys_bc
     read_params();
-
-    NUM_STATE = 1;
 
     AxRe       = 0;
     AxIm       = 1;

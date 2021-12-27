@@ -57,54 +57,6 @@ public:
     virtual ~Nyx() override;
 
     //
-    //Restart from a checkpoint file.
-    //
-    virtual void restart(amrex::Amr& papa, istream& is, bool b_read_special=false) override;
-
-    //
-    //Call amrex::AmrLevel::checkPoint and then add radiation info
-    //
-    virtual void checkPoint(const std::string& dir, std::ostream& os,
-                            amrex::VisMF::How how, bool dump_old) override;
-    virtual void checkPointPre(const std::string& dir, std::ostream& os) override;
-    virtual void checkPointPost(const std::string& dir, std::ostream& os) override;
-
-    // A string written as the first item in `write_plot_file()` at level zero.
-    // It is so we can distinguish between different types of plot files. For
-    // Nyx it has the form: Nyx-Vnnn.
-    virtual std::string thePlotFileType() const override;
-
-    virtual void setPlotVariables() override;
-
-    //
-    //Write a plotfile to specified directory.
-    //
-    virtual void writePlotFile(const std::string& dir, ostream& os, amrex::VisMF::How how) override;
-#ifdef BL_HDF5
-    virtual void writePlotFileHDF5(const std::string& dir, ostream& os, amrex::VisMF::How how) override;
-#endif
-    virtual void writePlotFilePre(const std::string& dir, ostream& os) override;
-    virtual void writePlotFilePost(const std::string& dir, ostream& os) override;
-
-    void writeJobInfo (const std::string& dir);
-    void writeGridsFile (const std::string& dir);
-
-    //
-    //Write amrex::MultiFab as plot file
-    //
-    void writeMultiFabAsPlotFile(const std::string& pltfile, const amrex::MultiFab& mf, std::string componentName);
-    //
-    //Write all parameters into specified directory.
-    //
-    static int write_parameters_in_plotfile;
-    virtual void write_parameter_file(const std::string& dir);
-    static int write_skip_prepost;
-    static int write_hdf5;
-
-    static int runlog_precision;
-    static int runlog_precision_terse;
-
-    //
     //Define data descriptors.
     //
     static void variable_setup();
@@ -123,49 +75,27 @@ public:
     //
     virtual void initData() override;
 
-    //
-    //Initialize grid data from a plotfile at problem start-up.
-    //
-    void init_from_plotfile();
+    // //
+    // //Initialize grid data from a plotfile at problem start-up.
+    // //
+    // void init_from_plotfile();
 
-    //
-    //Initialize grid data from a plotfile at problem start-up.
-    //
-    void ReadPlotFile(bool first, const std::string& plot_file_name, bool& rhoe_infile);
+    // //
+    // //Initialize grid data from a plotfile at problem start-up.
+    // //
+    // void ReadPlotFile(bool first, const std::string& plot_file_name, bool& rhoe_infile);
 
-    //
-    // Initial time in code units
-    //
-    static amrex::Real initial_time;
+    // //
+    // // Initial time in code units
+    // //
+    // static amrex::Real initial_time;
 
-    //
-    // End time in code units
-    //
-    static amrex::Real final_time;
+    // //
+    // // End time in code units
+    // //
+    // static amrex::Real final_time;
 
-    //
-    // Positive number means use powers of 2 binning for relative dt
-    //
-    static amrex::Real dt_binpow;
 
-    static int State_for_Time;
-
-    //
-    // How to initialize typical values at restart (from checkpoint or plotfile)
-    //
-    // void typical_values_post_restart(const std::string& restart_file);
-
-    //
-    // Initialize the zhi component of the EOS from a binary input file
-    //
-    // void init_zhi ();
-    // void check_initial_species();
-    // void init_e_from_T(const amrex::Real& a);
-
-    //
-    // Initialize from MUSIC
-    //
-    // void initcosmo();
     void icReadAndPrepareFab(std::string mfDirName, int nghost, amrex::MultiFab &mf);
 
   void initialize_axion_string_simulation (std::string readin_ics_fname);
@@ -186,21 +116,6 @@ public:
   void actually_compute_powerspectrum (hacc::Dfft& dfft, std::vector<complex_t, hacc::AlignedAllocator<complex_t, ALIGN> >& a, amrex::Real time);
 #endif
 
-    // //
-    // // Write forcing spectrum in checkpoint directories
-    // //
-    // void forcing_check_point (const std::string& dir);
-
-    // //
-    // // Restore spectrum at restart
-    // //
-    // void forcing_post_restart(const std::string& restart_file);
-
-    //
-    //Set time levels of state data.
-    //
-    virtual void setTimeLevel (amrex::Real time, amrex::Real dt_old, amrex::Real dt_new) override;
-
     //
     //Initialize data on this level from another Nyx (during regrid).
     //
@@ -213,23 +128,6 @@ public:
     virtual void init() override;
 
     //
-    // Proceed with next timestep?
-    //
-    virtual int okToContinue() override;
-
-    //
-    // Tell amrex::Amr to write a plotfile now
-    //
-    bool writePlotNow() override;
-
-    //
-    // Tell Nyx to do analysis now
-    //
-    // bool doAnalysisNow();
-
-    // int updateInSitu();
-
-    //
     // Advance grids at this level in time.
     //
     virtual amrex::Real advance(amrex::Real time, amrex::Real dt, int iteration, int ncycle) override;
@@ -237,12 +135,12 @@ public:
     //
     // Estimate time step.
     //
-    amrex::Real est_time_step(amrex::Real dt_old);
+    amrex::Real est_time_step();
 
-    //
-    // Compute initial time step.
-    //
-    amrex::Real initial_time_step();
+    // //
+    // // Compute initial time step.
+    // //
+    // amrex::Real initial_time_step();
 
     //
     // Compute initial `dt'.
@@ -266,19 +164,9 @@ public:
     virtual void post_timestep(int iteration) override;
 
     //
-    // Contains operations to be done only after a full coarse timestep.
-    //
-    virtual void postCoarseTimeStep(amrex::Real cumtime) override;
-
-    //
     // Do work after `regrid()`.
     //
     virtual void post_regrid(int lbase, int new_finest) override;
-
-    //
-    // Do work after a `restart()`.
-    //
-    virtual void post_restart() override;
 
     //
     // Do work after `init()`.
@@ -290,11 +178,6 @@ public:
     //
     virtual void errorEst(amrex::TagBoxArray& tb, int clearval, int tagval, amrex::Real time,
                           int n_error_buf=0, int ngrow=0) override;
-
-    //
-    // Error estimation for regridding.
-    //
-    virtual int WorkEstType () override { return 0; }
 
     //
     // Called in grid_places after other tagging routines to modify
@@ -336,9 +219,6 @@ public:
   static amrex::Vector<int> test_posy;
   static amrex::Vector<int> test_posz;
   static amrex::Vector<int>fixmodulus;
-    static int NUM_STATE;
-
-    static amrex::Real tagging_base;
 
     //
     // This amrex::MultiFab is used for the level coarser than this level to mask out
@@ -349,17 +229,6 @@ public:
     amrex::MultiFab* fine_mask;
     amrex::MultiFab* build_fine_mask();
 
-    static void InitErrorList();
-    static void InitDeriveList();
-
-    // //! Get the level directory names
-    void LevelDirectoryNames (const std::string &dir,
-                              const std::string &secondDir,  // ---- probably DM or AGN
-                              std::string &LevelDir,
-                              std::string &FullPath);
-    //! Create the Level_ and other directories in checkpoint and plot files
-    virtual void CreateLevelDirectory (const std::string &dir) override;
-
 protected:
 
     static void read_params();
@@ -369,12 +238,12 @@ protected:
     void average_down();
     void average_down(int state_indx);
 
-    void build_metrics();
+    // void build_metrics();
 
-    void set_small_values_given_average (amrex::Real average_dens, amrex::Real average_temp, amrex::Real a,
-                                         amrex::Real & small_dens_inout, amrex::Real & small_temp_inout,
-                                         amrex::Real &small_pres_inout, amrex::Real gamma_minus_1,
-                                         amrex::Real h_species);
+    // void set_small_values_given_average (amrex::Real average_dens, amrex::Real average_temp, amrex::Real a,
+    //                                      amrex::Real & small_dens_inout, amrex::Real & small_temp_inout,
+    //                                      amrex::Real &small_pres_inout, amrex::Real gamma_minus_1,
+    //                                      amrex::Real h_species);
 
     void write_info();
 
@@ -383,52 +252,11 @@ protected:
     //
     static bool dump_old;
     static int verbose;
-    static amrex::Real cfl;
-    static amrex::Real init_shrink;
     static amrex::Real change_max;
-    static int do_reflux;
     static amrex::ErrorList err_list;
     static amrex::Vector<amrex::AMRErrorTag> errtags;
     static amrex::BCRec phys_bc;
-
     static int nsteps_from_plotfile;
-
-    static int nghost_state;
-    static int ppm_type;
-    static int strang_grown_box;
-
-    static std::string enforce_min_density_type;
-
-    static int num_particle_ghosts;
-
-    static amrex::Real small_dens;
-    static amrex::Real small_pres;
-    static amrex::Real small_temp;
-    static amrex::Real small;
-
-    static amrex::Real large_temp;
-
-    static int load_balance_int;
-    static amrex::Real load_balance_start_z;
-    static int load_balance_wgt_strategy;
-    static int load_balance_wgt_nmax;
-    static int load_balance_strategy;
-
-    bool FillPatchedOldState_ok;
-
-    // specifies the memory priority
-    static int minimize_memory;
-
-    // specifies the ShrinkToFit priority
-    static int shrink_to_fit;
-
-  // for keeping track of the amount of CPU time used -- this will persist
-  // after restarts
-  static amrex::Real      previousCPUTimeUsed;
-  static amrex::Real      startCPUTime;
-
-  static amrex::Real getCPUTime();
-
 };
 
 //

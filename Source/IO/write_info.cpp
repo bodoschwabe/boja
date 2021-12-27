@@ -8,9 +8,6 @@ Nyx::write_info ()
 {
     int ndatalogs = parent->NumDataLogs();
 
-    int rlp  = Nyx::runlog_precision;
-    int rlpt = amrex::min(rlp,Nyx::runlog_precision_terse);
-
     if (ndatalogs > 0)
     {
 
@@ -19,7 +16,7 @@ Nyx::write_info ()
         compute_axionyx_quantities(stringdens, test_val);
         MultiFab&  Ax_new = get_level(0).get_new_data(Axion_Type);
 
-        Real time  = state[State_for_Time].curTime();
+        Real time  = state[Axion_Type].curTime();
         Real dt    = parent->dtLevel(0);
         int  nstep = parent->levelSteps(0);
 
@@ -42,8 +39,8 @@ Nyx::write_info ()
 	    }
 
 	    data_loga << std::setw( 8) <<  nstep;
-	    data_loga << std::setw(14) <<  std::setprecision(rlp) << time;
-	    data_loga << std::setw(14) <<  std::setprecision(rlp) << dt;
+	    data_loga << std::setw(14) <<  std::setprecision(10) << time;
+	    data_loga << std::setw(14) <<  std::setprecision(10) << dt;
 	    data_loga << std::setw(22) <<  std::setprecision(6)   << stringdens;
 	    for(int i=0; i<Nyx::test_posx.size(); i++)
 	      for(int n=0 ; n<Ax_new.nComp(); n++)

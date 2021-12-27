@@ -25,39 +25,14 @@ using std::string;
 
 using namespace amrex;
 
-static int sum_interval = -1;
-static int  max_temp_dt = -1;
-
 static Real fixed_dt    = -1.0;
-static Real initial_dt  = -1.0;
-static Real dt_cutoff   =  0;
-
-int Nyx::load_balance_int = -1;
-amrex::Real Nyx::load_balance_start_z = 15;
-int Nyx::load_balance_wgt_strategy = 0;
-int Nyx::load_balance_wgt_nmax = -1;
-int Nyx::load_balance_strategy = DistributionMapping::SFC;
-
 bool Nyx::dump_old = false;
 int Nyx::verbose      = 0;
-
-Real Nyx::cfl = 0.8;
-Real Nyx::init_shrink = 1.0;
 Real Nyx::change_max  = 1.1;
-
 BCRec Nyx::phys_bc;
-int Nyx::do_reflux = 1;
-int Nyx::NUM_STATE = -1;
-
 int Nyx::nsteps_from_plotfile = -1;
-
 ErrorList Nyx::err_list;
 Vector<AMRErrorTag> Nyx::errtags;
-
-int Nyx::minimize_memory = 0;
-int Nyx::shrink_to_fit = 0;
-
-int Nyx::State_for_Time = Axion_Type;
 
 int Nyx::NUM_AX = -1;
 int Nyx::nstep_spectrum = -1;
@@ -85,22 +60,6 @@ Vector<int> Nyx::fixmodulus;
 #include <omp.h>
 #endif
 
-// The default for how many digits to use for each column in the runlog
-// We have a second parameter (rlp_terse) for regression-testing those quantities 
-//    which show more variation than others
-int Nyx::runlog_precision = 6;
-int Nyx::runlog_precision_terse = 6;
-
-int Nyx::write_parameters_in_plotfile = true;
-int Nyx::write_skip_prepost = 0;
-int Nyx::write_hdf5 = 0;
-
-// this will be reset upon restart
-Real         Nyx::previousCPUTimeUsed = 0.0;
-
-Real         Nyx::startCPUTime = 0.0;
-
-// Note: Nyx::variableSetUp is in Nyx_setup.cpp
 void
 Nyx::variable_cleanup ()
 {
@@ -115,15 +74,9 @@ Nyx::read_params ()
     ParmParse pp_nyx("nyx");
 
     pp_nyx.query("v", verbose);
-    pp_nyx.get("init_shrink", init_shrink);
-    pp_nyx.get("cfl", cfl);
-    pp_nyx.query("change_max", change_max);
     pp_nyx.query("fixed_dt", fixed_dt);
-    pp_nyx.query("initial_dt", initial_dt);
-    pp_nyx.query("max_temp_dt", max_temp_dt);
-    pp_nyx.query("sum_interval", sum_interval);
-    pp_nyx.get("dt_cutoff", dt_cutoff);
-
+    pp_nyx.query("change_max", change_max);
+    
     pp_nyx.query("nstep_spectrum", nstep_spectrum);
     pp_nyx.query("neighbors", neighbors);
     pp_nyx.query("jaxions_ic",jaxions_ic);
@@ -174,108 +127,6 @@ Nyx::read_params ()
         phys_bc.setLo(i, lo_bc[i]);
         phys_bc.setHi(i, hi_bc[i]);
     }
-
-    //
-    // Check phys_bc against possible periodic geometry
-    // if periodic, must have internal BC marked.
-    //
-    if (DefaultGeometry().isAnyPeriodic())
-    {
-        //
-        // Do idiot check.  Periodic means interior in those directions.
-        //
-        for (int dir = 0; dir < AMREX_SPACEDIM; dir++)
-        {
-            if (DefaultGeometry().isPeriodic(dir))
-            {
-                if (lo_bc[dir] != Interior)
-                {
-                    std::cerr << "Nyx::read_params:periodic in direction "
-                              << dir
-                              << " but low BC is not Interior" << std::endl;
-                    amrex::Error();
-                }
-                if (hi_bc[dir] != Interior)
-                {
-                    std::cerr << "Nyx::read_params:periodic in direction "
-                              << dir
-                              << " but high BC is not Interior" << std::endl;
-                    amrex::Error();
-                }
-            }
-        }
-    }
-    else
-    {
-        //
-        // Do idiot check.  If not periodic, should be no interior.
-        //
-        for (int dir = 0; dir < AMREX_SPACEDIM; dir++)
-        {
-            if (lo_bc[dir] == Interior)
-            {
-                std::cerr << "Nyx::read_params:interior bc in direction "
-                          << dir
-                          << " but not periodic" << std::endl;
-                amrex::Error();
-            }
-            if (hi_bc[dir] == Interior)
-            {
-                std::cerr << "Nyx::read_params:interior bc in direction "
-                          << dir
-                          << " but not periodic" << std::endl;
-                amrex::Error();
-            }
-        }
-    }
-
-    pp_nyx.query("runlog_precision",runlog_precision);
-    pp_nyx.query("runlog_precision_terse",runlog_precision_terse);
-
-    pp_nyx.query("write_parameter_file",write_parameters_in_plotfile);
-    if(pp_nyx.query("write_hdf5",write_hdf5))
-        write_skip_prepost = write_hdf5;
-    else
-        pp_nyx.query("write_skip_prepost",write_skip_prepost);
-
-#ifndef AMREX_USE_HDF5
-    if(write_hdf5 == 1)
-        amrex::Error("Must compile with USE_HDF5 = TRUE for write_hdf5 = 1");
-#endif
-
-#ifdef AMREX_USE_HDF5_ASYNC
-    // Complete all previous async writes on amrex::Finalize()
-    amrex::ExecOnFinalize(H5VLasync_waitall);
-#endif
-
-    pp_nyx.query("load_balance_int",          load_balance_int);
-    pp_nyx.query("load_balance_wgt_strategy", load_balance_wgt_strategy);
-    load_balance_wgt_nmax = amrex::ParallelDescriptor::NProcs();
-    pp_nyx.query("load_balance_wgt_nmax",     load_balance_wgt_nmax);
-
-    std::string theStrategy;
-
-    if (pp_nyx.query("load_balance_strategy", theStrategy))
-    {
-        if (theStrategy == "SFC")
-        {
-            load_balance_strategy=DistributionMapping::Strategy::SFC;
-        }
-        else if (theStrategy == "KNAPSACK")
-        {
-            load_balance_strategy=DistributionMapping::Strategy::KNAPSACK;
-        }
-        else if (theStrategy == "ROUNDROBIN")
-        {
-            load_balance_strategy=DistributionMapping::Strategy::ROUNDROBIN;
-        }
-        else
-        {
-            std::string msg("Unknown strategy: ");
-            msg += theStrategy;
-            amrex::Warning(msg.c_str());
-        }
-    }
 }
 
 Nyx::Nyx ()
@@ -297,56 +148,12 @@ Nyx::Nyx (Amr&            papa,
 
     MultiFab::RegionTag amrlevel_tag("AmrLevel_Level_" + std::to_string(lev));
 
-    build_metrics();
     fine_mask = 0;
 }
 
 Nyx::~Nyx ()
 {
     delete fine_mask;
-}
-
-void
-Nyx::restart (Amr&     papa,
-              istream& is,
-              bool     b_read_special)
-{
-    BL_PROFILE("Nyx::restart()");
-    AmrLevel::restart(papa, is, b_read_special);
-
-    build_metrics();
-
-    // get the elapsed CPU time to now;
-    if (level == 0 && ParallelDescriptor::IOProcessor())
-    {
-      // get elapsed CPU time
-      std::ifstream CPUFile;
-      std::string FullPathCPUFile = parent->theRestartFile();
-      FullPathCPUFile += "/CPUtime";
-      CPUFile.open(FullPathCPUFile.c_str(), std::ios::in);
-
-      CPUFile >> previousCPUTimeUsed;
-      CPUFile.close();
-
-      std::cout << "read CPU time: " << previousCPUTimeUsed << "\n";
-    }
-}
-
-void
-Nyx::build_metrics ()
-{
-}
-
-void
-Nyx::setTimeLevel (Real time,
-                   Real dt_old,
-                   Real dt_new)
-{
-    if (verbose && ParallelDescriptor::IOProcessor()) {
-       std::cout << "Setting the current time in the state data to "
-                 << parent->cumTime() << std::endl;
-    }
-    AmrLevel::setTimeLevel(time, dt_old, dt_new);
 }
 
 void
@@ -361,8 +168,8 @@ Nyx::init (AmrLevel& old)
     //
     Real dt_new = parent->dtLevel(level);
 
-    Real cur_time  = old_level->state[State_for_Time].curTime();
-    Real prev_time = old_level->state[State_for_Time].prevTime();
+    Real cur_time  = old_level->state[Axion_Type].curTime();
+    Real prev_time = old_level->state[Axion_Type].prevTime();
 
     Real dt_old = cur_time - prev_time;
     setTimeLevel(cur_time, dt_old, dt_new);
@@ -385,8 +192,8 @@ Nyx::init ()
     BL_PROFILE("Nyx::init()");
     Real dt        = parent->dtLevel(level);
 
-    Real cur_time  = get_level(level-1).state[State_for_Time].curTime();
-    Real prev_time = get_level(level-1).state[State_for_Time].prevTime();
+    Real cur_time  = get_level(level-1).state[Axion_Type].curTime();
+    Real prev_time = get_level(level-1).state[Axion_Type].prevTime();
 
     Real dt_old    = (cur_time - prev_time) / (Real)parent->MaxRefRatio(level-1);
 
@@ -401,26 +208,7 @@ Nyx::init ()
 }
 
 Real
-Nyx::initial_time_step ()
-{
-    BL_PROFILE("Nyx::initial_time_step()");
-    Real dummy_dt = 0;
-    Real init_dt = 0;
-
-    if (initial_dt > 0)
-    {
-        init_dt = initial_dt;
-    }
-    else
-    {
-        init_dt = init_shrink * est_time_step(dummy_dt);
-    }
-
-    return init_dt;
-}
-
-Real
-Nyx::est_time_step (Real /*dt_old*/)
+Nyx::est_time_step ()
 {
     BL_PROFILE("Nyx::est_time_step()");
     if (fixed_dt > 0)
@@ -470,7 +258,7 @@ Nyx::computeNewDt (int                      finest_level,
     for (i = 0; i <= finest_level; i++)
     {
         Nyx& adv_level = get_level(i);
-        dt_min[i] = adv_level.est_time_step(dt_level[i]);
+        dt_min[i] = adv_level.est_time_step();
     }
 
     if (fixed_dt <= 0.0)
@@ -591,7 +379,7 @@ Nyx::computeNewDt (int                      finest_level,
     // Limit dt's by the value of stop_time.
     //
     const Real eps = 0.001 * dt_0;
-    Real cur_time = state[State_for_Time].curTime();
+    Real cur_time = state[Axion_Type].curTime();
     if (stop_time >= 0.0)
     {
         if ((cur_time + dt_0) > (stop_time - eps))
@@ -632,7 +420,7 @@ Nyx::computeInitialDt (int                      finest_level,
         Vector<Real> dt_max(finest_level+1);
         for (i = 0; i <= finest_level; i++)
         {
-            dt_max[i] = get_level(i).initial_time_step();
+            dt_max[i] = get_level(i).est_time_step();
         }
         // Find the maximum number of cycles allowed
         Vector<int> cycle_max(finest_level+1);
@@ -666,7 +454,7 @@ Nyx::computeInitialDt (int                      finest_level,
     {
         for (i = 0; i <= finest_level; i++)
         {
-            dt_level[i] = get_level(i).initial_time_step();
+            dt_level[i] = get_level(i).est_time_step();
             n_factor *= n_cycle[i];
             dt_0 = std::min(dt_0, n_factor * dt_level[i]);
         }
@@ -675,7 +463,7 @@ Nyx::computeInitialDt (int                      finest_level,
     // Limit dt's by the value of stop_time.
     //
     const Real eps = 0.001 * dt_0;
-    Real cur_time = state[State_for_Time].curTime();
+    Real cur_time = state[Axion_Type].curTime();
     if (stop_time >= 0)
     {
         if ((cur_time + dt_0) > (stop_time - eps))
@@ -689,19 +477,6 @@ Nyx::computeInitialDt (int                      finest_level,
         dt_level[i] = dt_0 / n_factor;
     }
 }
-
-bool
-Nyx::writePlotNow ()
-{
-  return false;
-}
-
-// bool
-// Nyx::doAnalysisNow ()
-// {
-//     BL_PROFILE("Nyx::doAnalysisNow()");
-//     return false;
-// }
 
 void
 Nyx::post_timestep (int iteration)
@@ -749,68 +524,6 @@ Nyx::post_timestep (int iteration)
 
 }
 
-// void
-// Nyx::typical_values_post_restart (const std::string& restart_file)
-// {
-//     if (level > 0)
-//         return;
-
-//     if (use_typical_steps)
-//     {
-//       if (ParallelDescriptor::IOProcessor())
-//         {
-//           std::string FileName = restart_file + "/first_max_steps";
-//           std::ifstream File;
-//           File.open(FileName.c_str(),std::ios::in);
-//           if (!File.good())
-//             amrex::FileOpenFailed(FileName);
-//           File >> old_max_sundials_steps;
-//         }
-//       ParallelDescriptor::Bcast(&old_max_sundials_steps, 1, ParallelDescriptor::IOProcessorNumber());
-
-//       if (ParallelDescriptor::IOProcessor())
-//         {
-//           std::string FileName = restart_file + "/second_max_steps";
-//           std::ifstream File;
-//           File.open(FileName.c_str(),std::ios::in);
-//           if (!File.good())
-//             amrex::FileOpenFailed(FileName);
-//           File >> new_max_sundials_steps;
-//         }
-//       ParallelDescriptor::Bcast(&new_max_sundials_steps, 1, ParallelDescriptor::IOProcessorNumber());
-//     }
-// }
-
-void
-Nyx::post_restart ()
-{
-    // BL_PROFILE("Nyx::post_restart()");
-
-    // if (level == 0)
-    //     typical_values_post_restart(parent->theRestartFile());
-
-    // // if (inhomo_reion) init_zhi();
-
-    // Real cur_time = state[State_for_Time].curTime();
-}
-
-
-void
-Nyx::postCoarseTimeStep (Real cumtime)
-{
-   BL_PROFILE("Nyx::postCoarseTimeStep()");
-   MultiFab::RegionTag amrPost_tag("Post_" + std::to_string(level));
-
-   AmrLevel::postCoarseTimeStep(cumtime);
-
-   if (verbose>1)
-   {
-       amrex::Print() << "End of postCoarseTimeStep, printing:" <<std::endl;
-       MultiFab::printMemUsage();
-       amrex::Arena::PrintUsage();
-   }
-}
-
 void
 Nyx::post_regrid (int lbase,
                   int new_finest)
@@ -845,22 +558,6 @@ Nyx::post_init (Real /*stop_time*/)
     write_info();
 
 }
-
-int
-Nyx::okToContinue ()
-{
-    if (level > 0) {
-        return 1;
-    }
-
-    int test = 1;
-    if (parent->dtLevel(0) < dt_cutoff) {
-        test = 0;
-    }
-
-    return test;
-}
-
 
 void
 Nyx::average_down ()
@@ -927,57 +624,4 @@ Nyx::derive (const std::string& name,
     BL_PROFILE("Nyx::derive()");
     const auto& derive_dat = AmrLevel::derive(name, time, mf.nGrow());
     MultiFab::Copy(mf, *derive_dat, 0, dcomp, 1, mf.nGrow());
-}
-
-Real
-Nyx::getCPUTime()
-{
-
-  int numCores = ParallelDescriptor::NProcs();
-#ifdef _OPENMP
-  numCores = numCores*omp_get_max_threads();
-#endif
-
-  Real T = numCores*(ParallelDescriptor::second() - startCPUTime) +
-    previousCPUTimeUsed;
-
-  return T;
-}
-
-void
-Nyx::InitErrorList() {
-}
-
-
-//static Box the_same_box (const Box& b) { return b; }
-
-void
-Nyx::InitDeriveList() {
-}
-
-
-void
-Nyx::LevelDirectoryNames(const std::string &dir,
-                         const std::string &secondDir,
-                         std::string &LevelDir,
-                         std::string &FullPath)
-{
-    LevelDir = amrex::Concatenate("Level_", level, 1);
-    //
-    // Now for the full pathname of that directory.
-    //
-    FullPath = dir;
-    if( ! FullPath.empty() && FullPath.back() != '/') {
-        FullPath += '/';
-    }
-    FullPath += secondDir;
-    FullPath += "/";
-    FullPath += LevelDir;
-}
-
-
-void
-Nyx::CreateLevelDirectory (const std::string &dir)
-{
-  AmrLevel::CreateLevelDirectory(dir);
 }
