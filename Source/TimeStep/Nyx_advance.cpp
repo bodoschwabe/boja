@@ -22,6 +22,7 @@ Nyx::advance (Real time, Real dt, int  iteration, int  ncycle)
 
     MultiFab&  Ax_old = get_old_data(Axion_Type);
     MultiFab&  Ax_new = get_new_data(Axion_Type);
+    Ax_old.FillBoundary(geom.periodicity());
 
 #ifdef DEBUG
     if (Ax_old.contains_nan(0, Ax_old.nComp(), 0))
@@ -32,6 +33,18 @@ Nyx::advance (Real time, Real dt, int  iteration, int  ncycle)
               {
 		std::cout << "Testing component i for NaNs: " << i << std::endl;
 		amrex::Abort("Ax_old has NaNs in this component::advance_AxComplex_FD()");
+              }
+          }
+      }
+
+    if (Ax_old.contains_nan(0, Ax_old.nComp(), Ax_old.nGrow()))
+      {
+        for (int i = 0; i < Ax_old.nComp(); i++)
+          {
+            if (Ax_old.contains_nan(i,1,Ax_old.nGrow()))
+              {
+		std::cout << "Testing component i for NaNs: " << i << std::endl;
+		amrex::Abort("Ax_old has ghost NaNs in this component::advance_AxComplex_FD()");
               }
           }
       }
@@ -57,6 +70,18 @@ Nyx::advance (Real time, Real dt, int  iteration, int  ncycle)
               }
           }
       }
+
+    if (Ax_new.contains_nan(0, Ax_new.nComp(), Ax_new.nGrow()))
+      {
+        for (int i = 0; i < Ax_new.nComp(); i++)
+          {
+            if (Ax_new.contains_nan(i,1,Ax_new.nGrow()))
+              {
+		std::cout << "Testing component i for NaNs: " << i << std::endl;
+		amrex::Abort("Ax_new has NaNs in this component::advance_AxComplex_FD()");
+              }
+          }
+      }
 #endif
     return dt;
 }
@@ -76,7 +101,7 @@ void Nyx::kick_AxComplex_FD(Real time, Real dt, MultiFab&  mf_old, MultiFab&  mf
       if(Nyx::prsstring)
 	lprs = pow(Nyx::msa/time,2)/2.0;
       else{
-	if(Nyx::string_stop_time<=0.0) amrex::Abort("prsstring needs string_stop_time>0");
+	if(Nyx::string_stop_time<=0.0) amrex::Abort("physstring needs string_stop_time>0");
 	lprs = pow(Nyx::msa/Nyx::string_stop_time,2)/2.0;
       }
       
@@ -113,6 +138,7 @@ void Nyx::kick_AxComplex_FD(Real time, Real dt, MultiFab&  mf_old, MultiFab&  mf
 			*pow(arr_old(i,j,k,Nyx::AxRe)*arr_old(i,j,k,Nyx::AxRe)+arr_old(i,j,k,Nyx::AxIm)*arr_old(i,j,k,Nyx::AxIm),-1.5));
 		  });
       }
+  mf_new.FillBoundary(geom.periodicity());
 }
 
 
@@ -138,6 +164,7 @@ void Nyx::drift_AxComplex_FD(Real dt, MultiFab&  mf_old, MultiFab&  mf_new)
 		    arr_new(i,j,k,Nyx::AxIm) = arr_old(i,j,k,Nyx::AxIm) + arr_new(i,j,k,Nyx::AxvIm)*dt;
 		  });
   }
+  mf_new.FillBoundary(geom.periodicity());
 }
 
 

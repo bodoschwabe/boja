@@ -1,7 +1,7 @@
 # ------------------  INPUTS TO MAIN PROGRAM  -------------------
 
 # TIME STEP CONTROL
-nyx.string_dt             = 1.0       # in units 1.5dx/sqrt(msa**2+12)
+nyx.string_dt             = 0.5       # in units 1.5dx/sqrt(msa**2+12)
 stop_time                 = 128.0
 
 # INITIAL CONDITIONS
@@ -21,15 +21,15 @@ amr.blocking_factor       = 8
 
 # INTEGRATION METHODS
 nyx.levelmethod           = 0 0 0 0  # which method to use 3=spectral, 0=finite_difference
-nyx.order                 = 2        # nth order spectral method 2 or 6
+nyx.neighbors             = 2        # 1 or 2 neighbor cells for finite difference stencil
 
 # STRING PHYSICS
-nyx.fixmodulus            = 1 0 0 0  # 1 = fix axion field modulus, 0 = don't fix it
+nyx.fixmodulus            = 0 0 0 0  # 1 = fix axion field modulus, 0 = don't fix it
 nyx.msa                   = 1.0      # string tension in units 1/delta/time meaning 1/a/tau
-nyx.prsstring             = 1        # prsstring = 1 , physstring = 0
+nyx.prsstring             = 0        # prsstring = 1 , physstring = 0
 nyx.string_time1          = 64.0     # defines string mass term
 nyx.string_n              = 4.0      # defines string mass term
-#nyx.string_stop_time     = 256      # final time of string simulation, needed only for coupling of physical strings
+nyx.string_stop_time      = 256      # final time of string simulation, needed only for coupling of physical strings
 nyx.sigmalut              = 0.05     # in units 1/dx of root grid
 nyx.nstep_spectrum        = 10       # how often do we want to output string spectrum
 nyx.string_massterm       = 1        # 1 = add the mass term to string evolution, 0 = don't add it

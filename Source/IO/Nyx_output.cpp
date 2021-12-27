@@ -531,48 +531,48 @@ void
 Nyx::checkPoint (const std::string& dir,
                  std::ostream&      os,
                  VisMF::How         how,
-                 bool               /*dump_old_default*/)
+                 bool               dump_old)
 {
 
-  for (int s = 0; s < desc_lst.size(); ++s) {
-      if (dump_old && state[s].hasOldData()) {
-          MultiFab& old_MF = get_old_data(s);
-          amrex::prefetchToHost(old_MF);
-      }
-      MultiFab& new_MF = get_new_data(s);
-      amrex::prefetchToHost(new_MF);
-  }
+  // for (int s = 0; s < desc_lst.size(); ++s) {
+  //     if (dump_old && state[s].hasOldData()) {
+  //         MultiFab& old_MF = get_old_data(s);
+  //         amrex::prefetchToHost(old_MF);
+  //     }
+  //     MultiFab& new_MF = get_new_data(s);
+  //     amrex::prefetchToHost(new_MF);
+  // }
 
   AmrLevel::checkPoint(dir, os, how, dump_old);
 
-  for (int s = 0; s < desc_lst.size(); ++s) {
-      if (dump_old && state[s].hasOldData()) {
-          MultiFab& old_MF = get_old_data(s);
-          amrex::prefetchToDevice(old_MF);
-      }
-      MultiFab& new_MF = get_new_data(s);
-      amrex::prefetchToDevice(new_MF);
-  }
+  // for (int s = 0; s < desc_lst.size(); ++s) {
+  //     if (dump_old && state[s].hasOldData()) {
+  //         MultiFab& old_MF = get_old_data(s);
+  //         amrex::prefetchToDevice(old_MF);
+  //     }
+  //     MultiFab& new_MF = get_new_data(s);
+  //     amrex::prefetchToDevice(new_MF);
+  // }
 
   if (level == 0 && ParallelDescriptor::IOProcessor())
   {
       writeJobInfo(dir);
-      writeGridsFile(dir);
+      // writeGridsFile(dir);
   }
 
-  if (level == 0 && ParallelDescriptor::IOProcessor())
-    {
-      {
-        // store elapsed CPU time
-        std::ofstream CPUFile;
-        std::string FullPathCPUFile = dir;
-        FullPathCPUFile += "/CPUtime";
-        CPUFile.open(FullPathCPUFile.c_str(), std::ios::out);
+  // if (level == 0 && ParallelDescriptor::IOProcessor())
+  //   {
+  //     {
+  //       // store elapsed CPU time
+  //       std::ofstream CPUFile;
+  //       std::string FullPathCPUFile = dir;
+  //       FullPathCPUFile += "/CPUtime";
+  //       CPUFile.open(FullPathCPUFile.c_str(), std::ios::out);
 
-        CPUFile << std::setprecision(15) << getCPUTime();
-        CPUFile.close();
-      }
-    }
+  //       CPUFile << std::setprecision(15) << getCPUTime();
+  //       CPUFile.close();
+  //     }
+  //   }
 }
 
 // int

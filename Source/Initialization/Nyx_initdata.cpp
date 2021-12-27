@@ -34,10 +34,10 @@ Nyx::initData ()
 	  const auto fab_Ax_new=Ax_new.array(mfi);
 	  prob_initdata_state_on_box(bx, fab_Ax_new);
 	}
-      Ax_new.FillBoundary(geom.periodicity());
       advance_initial_conditions();      
+      Ax_new.FillBoundary(geom.periodicity());
     }
-
+    
     amrex::Gpu::Device::synchronize();
 
     if (verbose && ParallelDescriptor::IOProcessor())
@@ -58,6 +58,7 @@ void Nyx::initialize_axion_string_simulation (std::string readin_ics_fname)
     if (ParallelDescriptor::IOProcessor())
       std::cout << "Interpolating Jaxions initial conditions onto level "<<level<<" ...done\n";
   }
+  Ax_new.FillBoundary(geom.periodicity());
 }
 
 void Nyx::icReadAndPrepareFab(std::string mfDirName, int nghost, MultiFab &mf)
@@ -155,35 +156,37 @@ void Nyx::setInitialTime ()
 
 void Nyx::advance_initial_conditions()
 {
-  for(int t=0; t<20; t++)
+  for(int t=0; t<20; t++){
 
     for (int k = 0; k < NUM_STATE_TYPE; k++) {
       state[k].allocOldData();
       state[k].swapTimeLevels(0.0);
     }
 
-  MultiFab&  mf_old = get_old_data(Axion_Type);
-  MultiFab&  mf_new = get_new_data(Axion_Type);
-  Real time = state[Axion_Type].curTime();
-
-  for (MFIter mfi(mf_old,TilingIfNotGPU()); mfi.isValid(); ++mfi)
-    {
-      const Box& bx  = mfi.tilebox();
-      auto const arr_in   = mf_old[mfi].const_array();
-      auto const arr_out  = mf_new[mfi].array();
-      Real diff = 0.01;
-
-      ParallelFor(bx,
-                  [=] AMREX_GPU_DEVICE (int i, int j, int k)
-                  {
-                    arr_out(i,j,k,Nyx::AxRe) = arr_in(i,j,k,Nyx::AxRe)+compute_laplace_operator(arr_in,i,j,k,Nyx::AxRe,diff,neighbors);
-                    arr_out(i,j,k,Nyx::AxIm) = arr_in(i,j,k,Nyx::AxIm)+compute_laplace_operator(arr_in,i,j,k,Nyx::AxIm,diff,neighbors);
-
-                    Real phase = atan2(arr_out(i,j,k,Nyx::AxIm),arr_out(i,j,k,Nyx::AxRe));
-                    arr_out(i,j,k,Nyx::AxvRe ) = cos(phase);
-                    arr_out(i,j,k,Nyx::AxvIm ) = sin(phase);
-                    arr_out(i,j,k,Nyx::AxRe  ) = time*arr_out(i,j,k,Nyx::AxvRe);
-                    arr_out(i,j,k,Nyx::AxIm  ) = time*arr_out(i,j,k,Nyx::AxvIm);
-		  });
-    }
+    MultiFab&  mf_old = get_old_data(Axion_Type);
+    MultiFab&  mf_new = get_new_data(Axion_Type);
+    Real time = state[Axion_Type].curTime();
+    
+    for (MFIter mfi(mf_old,TilingIfNotGPU()); mfi.isValid(); ++mfi)
+      {
+	const Box& bx  = mfi.tilebox();
+	auto const arr_in   = mf_old[mfi].const_array();
+	auto const arr_out  = mf_new[mfi].array();
+	Real diff = 0.01;
+	
+	ParallelFor(bx,
+		    [=] AMREX_GPU_DEVICE (int i, int j, int k)
+		    {
+		      arr_out(i,j,k,Nyx::AxRe) = arr_in(i,j,k,Nyx::AxRe)+compute_laplace_operator(arr_in,i,j,k,Nyx::AxRe,diff,neighbors);
+		      arr_out(i,j,k,Nyx::AxIm) = arr_in(i,j,k,Nyx::AxIm)+compute_laplace_operator(arr_in,i,j,k,Nyx::AxIm,diff,neighbors);
+		      
+		      Real phase = atan2(arr_out(i,j,k,Nyx::AxIm),arr_out(i,j,k,Nyx::AxRe));
+		      arr_out(i,j,k,Nyx::AxvRe ) = cos(phase);
+		      arr_out(i,j,k,Nyx::AxvIm ) = sin(phase);
+		      arr_out(i,j,k,Nyx::AxRe  ) = time*arr_out(i,j,k,Nyx::AxvRe);
+		      arr_out(i,j,k,Nyx::AxIm  ) = time*arr_out(i,j,k,Nyx::AxvIm);
+		    });
+      }
+    mf_new.FillBoundary(geom.periodicity());
+  }
 }

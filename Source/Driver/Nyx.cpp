@@ -979,4 +979,5 @@ Nyx::LevelDirectoryNames(const std::string &dir,
 void
 Nyx::CreateLevelDirectory (const std::string &dir)
 {
+  AmrLevel::CreateLevelDirectory(dir);
 }
