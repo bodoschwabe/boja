@@ -1,0 +1,3 @@
+CEXE_sources += Nyx_advance.cpp
+CEXE_headers += compute_laplace_operator.H
+CEXE_sources += compute_laplace_operator.cpp

@@ -1,0 +1,12 @@
+CEXE_sources += main.cpp
+
+CEXE_sources += Nyx.cpp
+CEXE_sources += NyxBld.cpp
+CEXE_sources += Nyx_error.cpp
+
+CEXE_sources += sum_utils.cpp
+
+CEXE_headers += Nyx.H
+
+CEXE_sources += Axionyx_powerspectrum.cpp
+CEXE_sources += Axionyx_utils.cpp

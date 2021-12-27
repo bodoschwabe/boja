@@ -1,0 +1,2 @@
+CEXE_sources += Nyx_output.cpp
+CEXE_sources += write_info.cpp

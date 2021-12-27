@@ -1,0 +1,8 @@
+CEXE_sources   += Nyx_setup.cpp
+CEXE_sources   += Nyx_initdata.cpp
+
+CEXE_sources += bc_fill.cpp
+CEXE_headers += bc_fill.H
+
+CEXE_sources += Prob.cpp
+CEXE_headers += Prob.H
